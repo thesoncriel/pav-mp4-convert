@@ -106,7 +106,8 @@ export async function convertPavToMp4(
     filesToClean.push('output.mp4');
     log(`변환 완료! MP4 크기: ${((outputData as Uint8Array).length / 1024).toFixed(1)} KB`);
 
-    return new Blob([outputData], { type: 'video/mp4' });
+    const output = outputData as Uint8Array;
+    return new Blob([output.buffer as ArrayBuffer], { type: 'video/mp4' });
   } catch (e) {
     throw e;
   } finally {
