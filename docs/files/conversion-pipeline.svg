@@ -1,0 +1,95 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 340" font-family="monospace" font-size="13">
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#6b7280"/>
+    </marker>
+    <marker id="arrBlue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#2563eb"/>
+    </marker>
+  </defs>
+
+  <text x="360" y="28" text-anchor="middle" font-size="18" font-weight="bold" fill="#1f2937">Conversion Pipeline</text>
+
+  <!-- Step 1: PAV File -->
+  <rect x="30" y="55" width="120" height="60" rx="8" fill="#fef3c7" stroke="#d97706" stroke-width="1.5"/>
+  <text x="90" y="82" text-anchor="middle" fill="#92400e" font-size="12" font-weight="bold">.pav file</text>
+  <text x="90" y="100" text-anchor="middle" fill="#92400e" font-size="10">upload</text>
+
+  <line x1="150" y1="85" x2="185" y2="85" stroke="#6b7280" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- Step 2: PAV Parser -->
+  <rect x="188" y="50" width="130" height="70" rx="8" fill="#ede9fe" stroke="#7c3aed" stroke-width="1.5"/>
+  <text x="253" y="77" text-anchor="middle" fill="#5b21b6" font-size="12" font-weight="bold">pavParser.ts</text>
+  <text x="253" y="95" text-anchor="middle" fill="#5b21b6" font-size="9">header parsing</text>
+  <text x="253" y="108" text-anchor="middle" fill="#5b21b6" font-size="9">frame split + repair</text>
+
+  <!-- Output branches -->
+  <line x1="318" y1="70" x2="380" y2="55" stroke="#6b7280" stroke-width="1.5" marker-end="url(#arr)"/>
+  <line x1="318" y1="100" x2="380" y2="115" stroke="#6b7280" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- JPEG Frames -->
+  <rect x="383" y="35" width="130" height="40" rx="6" fill="#dbeafe" stroke="#2563eb" stroke-width="1.5"/>
+  <text x="448" y="52" text-anchor="middle" fill="#1e40af" font-size="11" font-weight="bold">JPEG Frames</text>
+  <text x="448" y="66" text-anchor="middle" fill="#1e40af" font-size="9">N frames (repaired)</text>
+
+  <!-- QCELP Audio -->
+  <rect x="383" y="95" width="130" height="40" rx="6" fill="#d1fae5" stroke="#059669" stroke-width="1.5"/>
+  <text x="448" y="112" text-anchor="middle" fill="#065f46" font-size="11" font-weight="bold">QCELP Audio</text>
+  <text x="448" y="126" text-anchor="middle" fill="#065f46" font-size="9">RIFF/QLCM (.qcp)</text>
+
+  <!-- Arrows to FFmpeg -->
+  <line x1="513" y1="55" x2="560" y2="80" stroke="#6b7280" stroke-width="1.5" marker-end="url(#arr)"/>
+  <line x1="513" y1="115" x2="560" y2="90" stroke="#6b7280" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- Step 3: FFmpeg WASM -->
+  <rect x="563" y="55" width="130" height="65" rx="8" fill="#fef3c7" stroke="#d97706" stroke-width="1.5"/>
+  <text x="628" y="80" text-anchor="middle" fill="#92400e" font-size="12" font-weight="bold">FFmpeg WASM</text>
+  <text x="628" y="96" text-anchor="middle" fill="#92400e" font-size="9">MJPEG -> H.264</text>
+  <text x="628" y="109" text-anchor="middle" fill="#92400e" font-size="9">QCELP -> AAC</text>
+
+  <!-- Arrow to output -->
+  <line x1="628" y1="120" x2="628" y2="155" stroke="#2563eb" stroke-width="2" marker-end="url(#arrBlue)"/>
+
+  <!-- Step 4: MP4 -->
+  <rect x="563" y="158" width="130" height="45" rx="8" fill="#dbeafe" stroke="#2563eb" stroke-width="2"/>
+  <text x="628" y="178" text-anchor="middle" fill="#1e40af" font-size="13" font-weight="bold">.mp4</text>
+  <text x="628" y="194" text-anchor="middle" fill="#1e40af" font-size="9">H.264 + AAC</text>
+
+  <!-- UI Flow -->
+  <text x="360" y="245" text-anchor="middle" font-size="15" font-weight="bold" fill="#1f2937">UI Flow</text>
+
+  <!-- State boxes -->
+  <rect x="30" y="260" width="100" height="40" rx="20" fill="#f3f4f6" stroke="#9ca3af" stroke-width="1.5"/>
+  <text x="80" y="285" text-anchor="middle" fill="#374151" font-size="11">idle</text>
+
+  <line x1="130" y1="280" x2="155" y2="280" stroke="#6b7280" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <rect x="158" y="260" width="100" height="40" rx="20" fill="#dbeafe" stroke="#2563eb" stroke-width="1.5"/>
+  <text x="208" y="285" text-anchor="middle" fill="#1e40af" font-size="11">uploaded</text>
+
+  <line x1="258" y1="280" x2="283" y2="280" stroke="#6b7280" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <rect x="286" y="260" width="100" height="40" rx="20" fill="#fef3c7" stroke="#d97706" stroke-width="1.5"/>
+  <text x="336" y="285" text-anchor="middle" fill="#92400e" font-size="11">loading</text>
+
+  <line x1="386" y1="280" x2="411" y2="280" stroke="#6b7280" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <rect x="414" y="260" width="100" height="40" rx="20" fill="#fef3c7" stroke="#d97706" stroke-width="1.5"/>
+  <text x="464" y="285" text-anchor="middle" fill="#92400e" font-size="11">converting</text>
+
+  <line x1="514" y1="280" x2="539" y2="280" stroke="#6b7280" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <rect x="542" y="260" width="100" height="40" rx="20" fill="#d1fae5" stroke="#059669" stroke-width="1.5"/>
+  <text x="592" y="285" text-anchor="middle" fill="#065f46" font-size="11">done</text>
+
+  <!-- Labels -->
+  <text x="143" y="270" text-anchor="middle" fill="#6b7280" font-size="8">upload</text>
+  <text x="271" y="270" text-anchor="middle" fill="#6b7280" font-size="8">convert</text>
+  <text x="399" y="270" text-anchor="middle" fill="#6b7280" font-size="8">loaded</text>
+  <text x="527" y="270" text-anchor="middle" fill="#6b7280" font-size="8">finish</text>
+
+  <!-- Error state -->
+  <rect x="310" y="315" width="80" height="30" rx="15" fill="#fee2e2" stroke="#dc2626" stroke-width="1.5"/>
+  <text x="350" y="335" text-anchor="middle" fill="#991b1b" font-size="10">error</text>
+  <line x1="350" y1="300" x2="350" y2="313" stroke="#dc2626" stroke-width="1" stroke-dasharray="3" marker-end="url(#arr)"/>
+</svg>

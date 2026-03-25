@@ -64,15 +64,19 @@ describe('parsePavFile', () => {
     expect(result.fps).toBeCloseTo(7.41, 1);
   });
 
-  it('should not have overlapping or missing bytes in frame extraction', () => {
-    const view = new DataView(sampleBuffer);
-    const jpegDataSize = view.getUint32(0, true);
-
-    // Total frame bytes should be <= jpegDataSize
-    const totalFrameBytes = result.frames.reduce((sum, f) => sum + f.length, 0);
-    expect(totalFrameBytes).toBeLessThanOrEqual(jpegDataSize);
-
-    // Frames should cover most of the video data (allowing small gaps)
-    expect(totalFrameBytes).toBeGreaterThan(jpegDataSize * 0.99);
+  it('should inject JPEG tables into incomplete frames', () => {
+    // Frame 0 has tables (SOF marker), so it's used as-is
+    // Frame 1+ should have tables injected → they must also have SOF marker
+    for (let i = 0; i < Math.min(5, result.frames.length); i++) {
+      const frame = result.frames[i];
+      let hasSOF = false;
+      for (let j = 0; j < frame.length - 1; j++) {
+        if (frame[j] === 0xFF && frame[j + 1] === 0xC0) {
+          hasSOF = true;
+          break;
+        }
+      }
+      expect(hasSOF).toBe(true);
+    }
   });
 });

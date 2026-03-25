@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import FileUpload from './components/FileUpload';
 import FramePreview from './components/FramePreview';
 import ConversionProgress from './components/ConversionProgress';
@@ -16,14 +16,13 @@ type AppState =
 
 function App() {
   const [state, setState] = useState<AppState>({ step: 'idle' });
+  const [logs, setLogs] = useState<string[]>([]);
+  const logsRef = useRef<string[]>([]);
 
   const handleFileSelected = useCallback(async (file: File) => {
     try {
-      console.log('[App] 파일 선택:', file.name, file.size, 'bytes');
       const buffer = await file.arrayBuffer();
-      console.log('[App] ArrayBuffer 읽기 완료');
       const pavData = parsePavFile(buffer);
-      console.log('[App] PAV 파싱 완료 - frames:', pavData.frames.length, 'fps:', pavData.fps, 'duration:', pavData.duration);
 
       if (pavData.frames.length === 0) {
         setState({ step: 'error', message: '유효한 PAV 파일이 아닙니다.' });
@@ -32,7 +31,6 @@ function App() {
 
       setState({ step: 'uploaded', pavData, fileName: file.name });
     } catch (e) {
-      console.error('[App] PAV 파싱 실패:', e);
       setState({ step: 'error', message: `PAV 파일 파싱 실패: ${e instanceof Error ? e.message : String(e)}` });
     }
   }, []);
@@ -42,22 +40,31 @@ function App() {
     const { pavData, fileName } = state;
 
     try {
-      console.log('[App] FFmpeg 로딩 시작...');
+      logsRef.current = [];
+      setLogs([]);
+
+      const appendLog = (msg: string) => {
+        logsRef.current = [...logsRef.current, msg];
+        setLogs(logsRef.current);
+      };
+
+      appendLog('FFmpeg 로딩 시작...');
       setState({ step: 'loading', pavData, fileName });
       await loadFFmpeg();
-      console.log('[App] FFmpeg 로딩 완료, 변환 시작...');
+      appendLog('FFmpeg 로딩 완료!');
 
       setState({ step: 'converting', pavData, fileName, progress: 0 });
-      const mp4Blob = await convertPavToMp4(pavData, (progress) => {
-        setState((prev) =>
-          prev.step === 'converting' ? { ...prev, progress } : prev
-        );
+      const mp4Blob = await convertPavToMp4(pavData, {
+        onProgress: (progress) => {
+          setState((prev) =>
+            prev.step === 'converting' ? { ...prev, progress } : prev
+          );
+        },
+        onLog: appendLog,
       });
 
-      console.log('[App] 변환 완료! MP4 크기:', mp4Blob.size, 'bytes');
       setState({ step: 'done', pavData, fileName, mp4Blob });
     } catch (e) {
-      console.error('[App] 변환 실패:', e);
       const message = e instanceof Error ? e.message : '변환 중 오류가 발생했습니다.';
       setState({ step: 'error', message });
     }
@@ -106,11 +113,12 @@ function App() {
             <ConversionProgress
               progress={state.step === 'converting' ? state.progress : 0}
               status={state.step === 'loading' ? 'loading' : 'converting'}
+              logs={logs}
             />
           )}
 
           {state.step === 'done' && (
-            <VideoPreview blob={state.mp4Blob} fileName={state.fileName} />
+            <VideoPreview blob={state.mp4Blob} fileName={state.fileName} logs={logs} />
           )}
 
           {state.step === 'error' && (
