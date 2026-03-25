@@ -16,7 +16,7 @@ export default function FramePreview({
   const [src, setSrc] = useState('');
 
   useEffect(() => {
-    const blob = new Blob([frame], { type: 'image/jpeg' });
+    const blob = new Blob([frame.buffer as ArrayBuffer], { type: 'image/jpeg' });
     const url = URL.createObjectURL(blob);
     setSrc(url);
     return () => URL.revokeObjectURL(url);
