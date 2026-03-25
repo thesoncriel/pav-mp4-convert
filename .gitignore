@@ -1,0 +1,32 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# FFmpeg WASM core (installed via npm, copied to public/)
+public/ffmpeg-core.*
+
+# PAV samples (keep only small ones)
+pav_samples/*
+!pav_samples/017_movie.pav
+!pav_samples/018_movie.pav
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
