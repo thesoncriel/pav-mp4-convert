@@ -8,6 +8,7 @@ import BatchProgress from './components/BatchProgress';
 import BatchResultView from './components/BatchResult';
 import { parsePavFile, type PavData } from './lib/pavParser';
 import { loadFFmpeg, convertPavToMp4, convertBatch, DEFAULT_CONCURRENCY, MAX_CONCURRENCY, type BatchResult } from './lib/converter';
+import { version } from '../package.json';
 
 type AppState =
   | { step: 'idle' }
@@ -166,7 +167,10 @@ function App() {
     <div className="min-h-screen bg-gray-100">
       <div className="max-w-2xl mx-auto px-4 py-12">
         <header className="text-center mb-10">
-          <h1 className="text-3xl font-bold text-gray-900">PAV to MP4 Converter</h1>
+          <h1 className="text-3xl font-bold text-gray-900">
+            PAV to MP4 Converter
+            <span className="text-lg font-normal text-gray-400 ml-2">v{version.split('.').slice(0, 2).join('.')}</span>
+          </h1>
           <p className="text-gray-600 mt-2">구형 휴대폰 PAV 동영상을 MP4로 변환합니다</p>
         </header>
 
