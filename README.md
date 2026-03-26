@@ -15,6 +15,7 @@
 | 스타일링 | Tailwind CSS v4 |
 | 영상 변환 | FFmpeg WASM (`@ffmpeg/ffmpeg` + `@ffmpeg/core`) |
 | ZIP 패키징 | JSZip |
+| 유틸리티 | lodash-es |
 | 테스트 | Vitest |
 
 ## 시작하기
@@ -123,13 +124,15 @@ PAV 파일의 가장 까다로운 특성은 **JPEG 테이블 공유**입니다.
    - 업스케일 적용 시 `scale=iw*N:ih*N:flags=lanczos` 필터 사용
    - 화질 옵션을 H.264 CRF 값으로 매핑 (quality 1~100 → CRF 51~0)
    - QCELP → AAC 오디오 트랜스코딩 (실패 시 비디오만 변환하는 fallback)
-   - 배치 변환 시 다수의 FFmpeg 인스턴스를 생성하여 병렬 처리 (각 인스턴스가 내부 Web Worker로 동작)
+   - 배치 변환 시 lodash-es `chunk`로 동시 작업 수 단위로 그룹 분할, 그룹별 `Promise.all`로 병렬 처리
+   - 각 파일마다 새 FFmpeg 인스턴스를 생성하여 내부 Web Worker로 동작, 완료 후 `terminate()`로 해제
    - 결과 MP4를 Blob으로 반환, 다중 파일은 JSZip으로 ZIP 패키징
 
 3. **UI 렌더링** (`App.tsx`)
    - 단일 파일: `idle` → `uploaded` → `loading` → `converting` → `done`
    - 다중 파일: `idle` → `batch-uploaded` → `batch-converting` → `batch-done`
-   - 변환 중 실시간 진행률 및 FFmpeg 로그 표시 (배치 시 파일별 개별 프로그레스바)
+   - 변환 중 실시간 진행률 표시 (단일: 프로그레스바 + 로그, 배치: 파일별 개별 프로그레스바)
+   - 배치 변환 시 로그는 변환 중 숨기고 완료 후 "변환 로그 보기"로 확인 가능
    - 완료 후 단일 파일은 브라우저 내 비디오 재생 및 MP4 다운로드, 다중 파일은 ZIP 다운로드
 
 ---
@@ -164,7 +167,11 @@ docs/files/
 
 본 프로젝트는 **Vibe Coding**으로 제작되었습니다. [Claude Code](https://claude.com/claude-code) (Claude Opus 4.6)를 활용하여 PAV 바이너리 포맷 분석, 파서 구현, UI 컴포넌트, 테스트 코드, 문서 및 다이어그램 작성까지 전 과정을 AI와 협업하여 진행했습니다.
 
-단, **FFmpeg WASM 로딩 부분(`ffmpeg.load`)은 작업자가 직접 개입**하여 수정했습니다. AI가 생성한 초기 코드에서 COEP 헤더 충돌 및 Vite의 ESM 모듈 가로채기 등의 이슈가 발생했고, [ffmpeg.wasm 공식 Usage 문서](https://ffmpegwasm.netlify.app/docs/getting-started/usage)를 참고하여 CDN 기반 `toBlobURL` 방식으로 직접 수정하여 해결했습니다.
+단, 아래 부분은 **작업자가 직접 개입**하여 수정했습니다:
+
+1. **FFmpeg WASM 로딩(`ffmpeg.load`)**: AI가 생성한 초기 코드에서 COEP 헤더 충돌 및 Vite의 ESM 모듈 가로채기 등의 이슈가 발생했고, [ffmpeg.wasm 공식 Usage 문서](https://ffmpegwasm.netlify.app/docs/getting-started/usage)를 참고하여 CDN 기반 `toBlobURL` 방식으로 직접 수정하여 해결했습니다.
+
+2. **배치 변환 병렬 처리 방식**: AI가 구현한 세마포어 기반 병렬 처리에서 FFmpeg 인스턴스 재사용 시 후반부 파일의 동시 처리 수가 떨어지는 문제가 발생했습니다. 작업자가 lodash-es `chunk`를 사용하여 동시 작업 수 단위로 파일을 그룹 분할하고, 그룹별 `Promise.all`로 처리하는 방식을 제안하여 안정적인 병렬 처리를 달성했습니다.
 
 ## 라이선스
 
