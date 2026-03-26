@@ -193,49 +193,73 @@ export async function convertBatch(
     onProgress?.(sum / total);
   };
 
-  log(`배치 변환 시작 - ${total}개 파일, 동시 ${Math.min(clampedConcurrency, total)}개 처리`);
-  log('FFmpeg 인스턴스 로딩 중...');
+  const effectiveConcurrency = Math.min(clampedConcurrency, total);
+  log(`배치 변환 시작 - ${total}개 파일, 동시 ${effectiveConcurrency}개 처리`);
 
-  const instanceCount = Math.min(clampedConcurrency, total);
-  const instances = await Promise.all(
-    Array.from({ length: instanceCount }, () => createFFmpegInstance())
-  );
-  log(`FFmpeg 인스턴스 ${instanceCount}개 로딩 완료!`);
+  // CDN URL 사전 캐싱
+  log('FFmpeg WASM 리소스 캐싱 중...');
+  await getFFmpegURLs();
+  log('FFmpeg WASM 리소스 캐싱 완료!');
 
-  let nextIndex = 0;
+  // 세마포어: 파일마다 새 인스턴스를 생성하되 동시 실행 수 제한
+  let running = 0;
+  const waiting: (() => void)[] = [];
 
-  async function processWithInstance(ff: FFmpeg) {
-    while (nextIndex < total) {
-      const idx = nextIndex++;
-      const item = items[idx];
-      log(`[${idx + 1}/${total}] ${item.fileName} 변환 시작`);
+  function acquire(): Promise<void> {
+    if (running < effectiveConcurrency) {
+      running++;
+      return Promise.resolve();
+    }
+    return new Promise<void>((resolve) => {
+      waiting.push(() => { running++; resolve(); });
+    });
+  }
 
-      try {
-        const blob = await runConversion(ff, item.pavData, {
-          scale,
-          quality,
-          onProgress: (p) => {
-            fileProgress[idx] = p;
-            onFileProgress?.(idx, p);
-            reportOverall();
-          },
-          onLog: (msg) => log(`[${item.fileName}] ${msg}`),
-        });
+  function release() {
+    running--;
+    const next = waiting.shift();
+    if (next) next();
+  }
 
-        fileProgress[idx] = 1;
-        onFileProgress?.(idx, 1);
-        reportOverall();
-        results[idx] = { fileName: item.fileName.replace(/\.pav$/i, '.mp4'), mp4Blob: blob };
-        log(`[${idx + 1}/${total}] ${item.fileName} 변환 완료!`);
-      } catch (e) {
-        const errMsg = e instanceof Error ? e.message : String(e);
-        log(`[${idx + 1}/${total}] ${item.fileName} 변환 실패: ${errMsg}`);
-        throw new Error(`${item.fileName} 변환 실패: ${errMsg}`);
+  async function processFile(idx: number) {
+    const item = items[idx];
+    await acquire();
+
+    log(`[${idx + 1}/${total}] ${item.fileName} 변환 시작 (인스턴스 생성 중...)`);
+    let ff: FFmpeg | null = null;
+
+    try {
+      ff = await createFFmpegInstance();
+
+      const blob = await runConversion(ff, item.pavData, {
+        scale,
+        quality,
+        onProgress: (p) => {
+          fileProgress[idx] = p;
+          onFileProgress?.(idx, p);
+          reportOverall();
+        },
+        onLog: (msg) => log(`[${item.fileName}] ${msg}`),
+      });
+
+      fileProgress[idx] = 1;
+      onFileProgress?.(idx, 1);
+      reportOverall();
+      results[idx] = { fileName: item.fileName.replace(/\.pav$/i, '.mp4'), mp4Blob: blob };
+      log(`[${idx + 1}/${total}] ${item.fileName} 변환 완료!`);
+    } catch (e) {
+      const errMsg = e instanceof Error ? e.message : String(e);
+      log(`[${idx + 1}/${total}] ${item.fileName} 변환 실패: ${errMsg}`);
+      throw new Error(`${item.fileName} 변환 실패: ${errMsg}`);
+    } finally {
+      if (ff) {
+        try { ff.terminate(); } catch { /* ignore */ }
       }
+      release();
     }
   }
 
-  await Promise.all(instances.map((ff) => processWithInstance(ff)));
+  await Promise.all(items.map((_, idx) => processFile(idx)));
 
   log(`전체 배치 변환 완료! ${total}개 파일`);
   return results;
