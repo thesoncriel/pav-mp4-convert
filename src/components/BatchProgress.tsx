@@ -1,21 +1,11 @@
-import { useEffect, useRef } from 'react';
-
 interface BatchProgressProps {
   fileNames: string[];
   fileProgress: number[];
   overallProgress: number;
-  logs: string[];
 }
 
-export default function BatchProgress({ fileNames, fileProgress, overallProgress, logs }: BatchProgressProps) {
+export default function BatchProgress({ fileNames, fileProgress, overallProgress }: BatchProgressProps) {
   const overallPercent = Math.round(overallProgress * 100);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-
-  useEffect(() => {
-    if (textareaRef.current) {
-      textareaRef.current.scrollTop = textareaRef.current.scrollHeight;
-    }
-  }, [logs.length]);
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-4">
@@ -56,15 +46,6 @@ export default function BatchProgress({ fileNames, fileProgress, overallProgress
           );
         })}
       </div>
-
-      {logs.length > 0 && (
-        <textarea
-          ref={textareaRef}
-          readOnly
-          value={logs.join('\n')}
-          className="w-full h-40 text-xs font-mono bg-gray-900 text-green-400 rounded-lg p-3 resize-none focus:outline-none"
-        />
-      )}
     </div>
   );
 }

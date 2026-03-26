@@ -314,7 +314,6 @@ function App() {
               fileNames={state.files.map((f) => f.fileName)}
               fileProgress={state.fileProgress}
               overallProgress={state.progress}
-              logs={logs}
             />
           )}
 
