@@ -1,7 +1,7 @@
 import { useCallback, useRef, useState } from 'react';
 
 interface FileUploadProps {
-  onFileSelected: (file: File) => void;
+  onFileSelected: (files: File[]) => void;
   disabled?: boolean;
 }
 
@@ -9,9 +9,12 @@ export default function FileUpload({ onFileSelected, disabled }: FileUploadProps
   const [isDragging, setIsDragging] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const handleFile = useCallback((file: File) => {
-    if (file.name.toLowerCase().endsWith('.pav')) {
-      onFileSelected(file);
+  const handleFiles = useCallback((fileList: FileList) => {
+    const pavFiles = Array.from(fileList).filter((f) =>
+      f.name.toLowerCase().endsWith('.pav')
+    );
+    if (pavFiles.length > 0) {
+      onFileSelected(pavFiles);
     }
   }, [onFileSelected]);
 
@@ -19,9 +22,8 @@ export default function FileUpload({ onFileSelected, disabled }: FileUploadProps
     e.preventDefault();
     setIsDragging(false);
     if (disabled) return;
-    const file = e.dataTransfer.files[0];
-    if (file) handleFile(file);
-  }, [handleFile, disabled]);
+    if (e.dataTransfer.files.length > 0) handleFiles(e.dataTransfer.files);
+  }, [handleFiles, disabled]);
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -37,8 +39,8 @@ export default function FileUpload({ onFileSelected, disabled }: FileUploadProps
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) handleFile(file);
+    const files = e.target.files;
+    if (files && files.length > 0) handleFiles(files);
     e.target.value = '';
   };
 
@@ -61,6 +63,7 @@ export default function FileUpload({ onFileSelected, disabled }: FileUploadProps
         ref={inputRef}
         type="file"
         accept=".pav"
+        multiple
         onChange={handleChange}
         className="hidden"
       />
@@ -69,7 +72,7 @@ export default function FileUpload({ onFileSelected, disabled }: FileUploadProps
         PAV 파일을 여기에 드래그하거나 클릭하여 선택
       </p>
       <p className="text-sm text-gray-500 mt-2">
-        .pav 파일만 지원됩니다
+        .pav 파일만 지원됩니다 (여러 파일 선택 가능)
       </p>
     </div>
   );
