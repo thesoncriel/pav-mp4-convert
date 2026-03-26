@@ -165,6 +165,7 @@ export interface BatchConvertOptions {
   scale?: number;
   quality?: number;
   onProgress?: (overall: number) => void;
+  onFileProgress?: (fileIndex: number, progress: number) => void;
   onLog?: (message: string) => void;
 }
 
@@ -177,7 +178,7 @@ export async function convertBatch(
   items: BatchItem[],
   options?: BatchConvertOptions,
 ): Promise<BatchResult[]> {
-  const { scale = 2, quality = 55, onProgress, onLog } = options ?? {};
+  const { scale = 2, quality = 55, onProgress, onFileProgress, onLog } = options ?? {};
   const log = (msg: string) => onLog?.(msg);
   const total = items.length;
   const fileProgress = new Float32Array(total);
@@ -212,12 +213,14 @@ export async function convertBatch(
           quality,
           onProgress: (p) => {
             fileProgress[idx] = p;
+            onFileProgress?.(idx, p);
             reportOverall();
           },
           onLog: (msg) => log(`[${item.fileName}] ${msg}`),
         });
 
         fileProgress[idx] = 1;
+        onFileProgress?.(idx, 1);
         reportOverall();
         results[idx] = { fileName: item.fileName.replace(/\.pav$/i, '.mp4'), mp4Blob: blob };
         log(`[${idx + 1}/${total}] ${item.fileName} 변환 완료!`);

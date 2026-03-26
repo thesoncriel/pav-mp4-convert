@@ -4,6 +4,7 @@ import FramePreview from './components/FramePreview';
 import ConversionProgress from './components/ConversionProgress';
 import VideoPreview from './components/VideoPreview';
 import ThumbnailGrid, { type BatchFileInfo } from './components/ThumbnailGrid';
+import BatchProgress from './components/BatchProgress';
 import BatchResultView from './components/BatchResult';
 import { parsePavFile, type PavData } from './lib/pavParser';
 import { loadFFmpeg, convertPavToMp4, convertBatch, type BatchResult } from './lib/converter';
@@ -17,7 +18,7 @@ type AppState =
   | { step: 'done'; pavData: PavData; fileName: string; mp4Blob: Blob }
   // Batch
   | { step: 'batch-uploaded'; files: BatchFileInfo[] }
-  | { step: 'batch-converting'; files: BatchFileInfo[]; progress: number }
+  | { step: 'batch-converting'; files: BatchFileInfo[]; progress: number; fileProgress: number[] }
   | { step: 'batch-done'; files: BatchFileInfo[]; results: BatchResult[] }
   // Error
   | { step: 'error'; message: string };
@@ -108,7 +109,7 @@ function App() {
       logsRef.current = [];
       setLogs([]);
 
-      setState({ step: 'batch-converting', files, progress: 0 });
+      setState({ step: 'batch-converting', files, progress: 0, fileProgress: new Array(files.length).fill(0) });
 
       const results = await convertBatch(
         files.map((f) => ({ fileName: f.fileName, pavData: f.pavData })),
@@ -119,6 +120,14 @@ function App() {
             setState((prev) =>
               prev.step === 'batch-converting' ? { ...prev, progress } : prev
             );
+          },
+          onFileProgress: (fileIndex, progress) => {
+            setState((prev) => {
+              if (prev.step !== 'batch-converting') return prev;
+              const fileProgress = [...prev.fileProgress];
+              fileProgress[fileIndex] = progress;
+              return { ...prev, fileProgress };
+            });
           },
           onLog: appendLog,
         },
@@ -252,9 +261,10 @@ function App() {
 
           {/* Batch conversion progress */}
           {state.step === 'batch-converting' && (
-            <ConversionProgress
-              progress={state.progress}
-              status="converting"
+            <BatchProgress
+              fileNames={state.files.map((f) => f.fileName)}
+              fileProgress={state.fileProgress}
+              overallProgress={state.progress}
               logs={logs}
             />
           )}
