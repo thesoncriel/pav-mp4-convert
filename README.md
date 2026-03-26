@@ -14,6 +14,7 @@
 | 빌드 도구 | Vite |
 | 스타일링 | Tailwind CSS v4 |
 | 영상 변환 | FFmpeg WASM (`@ffmpeg/ffmpeg` + `@ffmpeg/core`) |
+| ZIP 패키징 | JSZip |
 | 테스트 | Vitest |
 
 ## 시작하기
@@ -34,12 +35,14 @@ npx vitest run
 
 ## 주요 기능
 
-1. **PAV 파일 업로드** - 드래그 앤 드롭 또는 클릭으로 파일 선택
-2. **프레임 미리보기** - 업로드 즉시 첫 번째 프레임을 이미지로 표시하고 파일 정보(해상도, FPS, 길이) 출력
+1. **PAV 파일 업로드** - 드래그 앤 드롭 또는 클릭으로 파일 선택 (다중 파일 지원)
+2. **프레임 미리보기** - 1개 파일: 상세 정보 표시 / 2개 이상: 썸네일 그리드로 일괄 표시
 3. **업스케일 옵션** - 원본 해상도 대비 1x~5x 업스케일 (기본 2x, Lanczos 보간)
 4. **화질 옵션** - 1~100 범위의 화질 설정 (기본 55, H.264 CRF 매핑)
-5. **실시간 변환** - 프로그레스 바와 FFmpeg 로그를 실시간 확인
-6. **결과 미리보기 및 다운로드** - 변환된 MP4를 브라우저에서 바로 재생하고 다운로드
+5. **배치 변환** - 여러 파일을 FFmpeg WASM 인스턴스 병렬 처리 (동시 작업 수 1~8개 설정 가능, 기본 4개)
+6. **파일별 진행률** - 배치 변환 시 전체 진행률 + 각 파일별 개별 프로그레스바 표시
+7. **실시간 변환** - 프로그레스 바와 FFmpeg 로그를 실시간 확인
+8. **결과 다운로드** - 1개 파일: MP4 재생 및 다운로드 / 다중 파일: ZIP으로 일괄 다운로드
 
 ---
 
@@ -120,12 +123,14 @@ PAV 파일의 가장 까다로운 특성은 **JPEG 테이블 공유**입니다.
    - 업스케일 적용 시 `scale=iw*N:ih*N:flags=lanczos` 필터 사용
    - 화질 옵션을 H.264 CRF 값으로 매핑 (quality 1~100 → CRF 51~0)
    - QCELP → AAC 오디오 트랜스코딩 (실패 시 비디오만 변환하는 fallback)
-   - 결과 MP4를 Blob으로 반환
+   - 배치 변환 시 다수의 FFmpeg 인스턴스를 생성하여 병렬 처리 (각 인스턴스가 내부 Web Worker로 동작)
+   - 결과 MP4를 Blob으로 반환, 다중 파일은 JSZip으로 ZIP 패키징
 
 3. **UI 렌더링** (`App.tsx`)
-   - 상태 머신: `idle` → `uploaded` → `loading` → `converting` → `done`
-   - 변환 중 실시간 진행률 및 FFmpeg 로그 표시
-   - 완료 후 브라우저 내 비디오 재생 및 MP4 다운로드
+   - 단일 파일: `idle` → `uploaded` → `loading` → `converting` → `done`
+   - 다중 파일: `idle` → `batch-uploaded` → `batch-converting` → `batch-done`
+   - 변환 중 실시간 진행률 및 FFmpeg 로그 표시 (배치 시 파일별 개별 프로그레스바)
+   - 완료 후 단일 파일은 브라우저 내 비디오 재생 및 MP4 다운로드, 다중 파일은 ZIP 다운로드
 
 ---
 
@@ -138,10 +143,13 @@ src/
 │   ├── pavParser.test.ts     # PAV 파서 테스트 (Vitest)
 │   └── converter.ts          # FFmpeg WASM 변환 로직
 ├── components/
-│   ├── FileUpload.tsx         # 드래그앤드롭 파일 업로드
-│   ├── FramePreview.tsx       # 첫 프레임 미리보기 + 파일 정보
-│   ├── ConversionProgress.tsx # 프로그레스 바 + 실시간 로그
-│   └── VideoPreview.tsx       # MP4 재생 + 다운로드 + 로그 모달
+│   ├── FileUpload.tsx         # 드래그앤드롭 파일 업로드 (다중 파일 지원)
+│   ├── FramePreview.tsx       # 첫 프레임 미리보기 + 파일 정보 (단일)
+│   ├── ThumbnailGrid.tsx      # 다중 파일 썸네일 그리드 (flex-wrap)
+│   ├── ConversionProgress.tsx # 프로그레스 바 + 실시간 로그 (단일)
+│   ├── BatchProgress.tsx      # 전체 + 파일별 프로그레스바 (배치)
+│   ├── BatchResult.tsx        # ZIP 다운로드 + 로그 모달 (배치)
+│   └── VideoPreview.tsx       # MP4 재생 + 다운로드 + 로그 모달 (단일)
 ├── App.tsx                    # 메인 앱 (상태 관리)
 ├── main.tsx
 └── index.css
