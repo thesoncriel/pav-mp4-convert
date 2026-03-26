@@ -154,7 +154,8 @@ export async function convertPavToMp4(
   return runConversion(ff, pavData, { scale, quality, onProgress, onLog });
 }
 
-const MAX_CONCURRENCY = 2;
+export const DEFAULT_CONCURRENCY = 4;
+export const MAX_CONCURRENCY = 8;
 
 export interface BatchItem {
   fileName: string;
@@ -164,6 +165,7 @@ export interface BatchItem {
 export interface BatchConvertOptions {
   scale?: number;
   quality?: number;
+  concurrency?: number;
   onProgress?: (overall: number) => void;
   onFileProgress?: (fileIndex: number, progress: number) => void;
   onLog?: (message: string) => void;
@@ -178,7 +180,8 @@ export async function convertBatch(
   items: BatchItem[],
   options?: BatchConvertOptions,
 ): Promise<BatchResult[]> {
-  const { scale = 2, quality = 55, onProgress, onFileProgress, onLog } = options ?? {};
+  const { scale = 2, quality = 55, concurrency = DEFAULT_CONCURRENCY, onProgress, onFileProgress, onLog } = options ?? {};
+  const clampedConcurrency = Math.max(1, Math.min(MAX_CONCURRENCY, concurrency));
   const log = (msg: string) => onLog?.(msg);
   const total = items.length;
   const fileProgress = new Float32Array(total);
@@ -190,10 +193,10 @@ export async function convertBatch(
     onProgress?.(sum / total);
   };
 
-  log(`배치 변환 시작 - ${total}개 파일, 동시 ${Math.min(MAX_CONCURRENCY, total)}개 처리`);
+  log(`배치 변환 시작 - ${total}개 파일, 동시 ${Math.min(clampedConcurrency, total)}개 처리`);
   log('FFmpeg 인스턴스 로딩 중...');
 
-  const instanceCount = Math.min(MAX_CONCURRENCY, total);
+  const instanceCount = Math.min(clampedConcurrency, total);
   const instances = await Promise.all(
     Array.from({ length: instanceCount }, () => createFFmpegInstance())
   );

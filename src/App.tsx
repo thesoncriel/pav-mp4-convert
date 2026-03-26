@@ -7,7 +7,7 @@ import ThumbnailGrid, { type BatchFileInfo } from './components/ThumbnailGrid';
 import BatchProgress from './components/BatchProgress';
 import BatchResultView from './components/BatchResult';
 import { parsePavFile, type PavData } from './lib/pavParser';
-import { loadFFmpeg, convertPavToMp4, convertBatch, type BatchResult } from './lib/converter';
+import { loadFFmpeg, convertPavToMp4, convertBatch, DEFAULT_CONCURRENCY, MAX_CONCURRENCY, type BatchResult } from './lib/converter';
 
 type AppState =
   | { step: 'idle' }
@@ -29,6 +29,7 @@ function App() {
   const logsRef = useRef<string[]>([]);
   const [scale, setScale] = useState(() => Number(sessionStorage.getItem('pav-scale')) || 2);
   const [quality, setQuality] = useState(() => Number(sessionStorage.getItem('pav-quality')) || 55);
+  const [concurrency, setConcurrency] = useState(() => Number(sessionStorage.getItem('pav-concurrency')) || DEFAULT_CONCURRENCY);
 
   const handleScaleChange = (value: number) => {
     setScale(value);
@@ -37,6 +38,10 @@ function App() {
   const handleQualityChange = (value: number) => {
     setQuality(value);
     sessionStorage.setItem('pav-quality', String(value));
+  };
+  const handleConcurrencyChange = (value: number) => {
+    setConcurrency(value);
+    sessionStorage.setItem('pav-concurrency', String(value));
   };
 
   const appendLog = useCallback((msg: string) => {
@@ -116,6 +121,7 @@ function App() {
         {
           scale,
           quality,
+          concurrency,
           onProgress: (progress) => {
             setState((prev) =>
               prev.step === 'batch-converting' ? { ...prev, progress } : prev
@@ -236,6 +242,34 @@ function App() {
                     <span>높음</span>
                   </div>
                 </div>
+
+                {state.step === 'batch-uploaded' && (
+                  <div>
+                    <label className="flex justify-between text-sm text-gray-600 mb-1">
+                      <span>동시 작업 수</span>
+                      <span className="font-medium text-gray-900">{concurrency}개</span>
+                    </label>
+                    <input
+                      type="range"
+                      min={1}
+                      max={MAX_CONCURRENCY}
+                      step={1}
+                      value={concurrency}
+                      onChange={(e) => handleConcurrencyChange(Number(e.target.value))}
+                      className="w-full accent-green-600"
+                    />
+                    <div className="flex justify-between text-xs text-gray-400 mt-0.5">
+                      {Array.from({ length: MAX_CONCURRENCY }, (_, i) => (
+                        <span key={i}>{i + 1}</span>
+                      ))}
+                    </div>
+                    {concurrency > DEFAULT_CONCURRENCY && (
+                      <p className="mt-2 text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                        &#x26A0; 주의! 동시 작업 수가 많으면 메모리 사용량이 크게 증가하여 웹 브라우저 작동이 중지될 수 있습니다.
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
 
               <button
