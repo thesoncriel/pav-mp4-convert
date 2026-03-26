@@ -144,7 +144,7 @@ function App() {
       const message = e instanceof Error ? e.message : '변환 중 오류가 발생했습니다.';
       setState({ step: 'error', message });
     }
-  }, [state, scale, quality, appendLog]);
+  }, [state, scale, quality, concurrency, appendLog]);
 
   const handleReset = () => {
     setState({ step: 'idle' });
