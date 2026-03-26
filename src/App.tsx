@@ -18,6 +18,8 @@ function App() {
   const [state, setState] = useState<AppState>({ step: 'idle' });
   const [logs, setLogs] = useState<string[]>([]);
   const logsRef = useRef<string[]>([]);
+  const [scale, setScale] = useState(2);
+  const [quality, setQuality] = useState(55);
 
   const handleFileSelected = useCallback(async (file: File) => {
     try {
@@ -55,6 +57,8 @@ function App() {
 
       setState({ step: 'converting', pavData, fileName, progress: 0 });
       const mp4Blob = await convertPavToMp4(pavData, {
+        scale,
+        quality,
         onProgress: (progress) => {
           setState((prev) =>
             prev.step === 'converting' ? { ...prev, progress } : prev
@@ -68,7 +72,7 @@ function App() {
       const message = e instanceof Error ? e.message : '변환 중 오류가 발생했습니다.';
       setState({ step: 'error', message });
     }
-  }, [state]);
+  }, [state, scale, quality]);
 
   const handleReset = () => {
     setState({ step: 'idle' });
@@ -101,12 +105,61 @@ function App() {
           )}
 
           {state.step === 'uploaded' && (
-            <button
-              onClick={handleConvert}
-              className="w-full py-3 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors cursor-pointer"
-            >
-              MP4로 변환하기
-            </button>
+            <div className="space-y-4">
+              <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-200 space-y-4">
+                <h3 className="text-sm font-semibold text-gray-700">변환 옵션</h3>
+
+                <div>
+                  <label className="flex justify-between text-sm text-gray-600 mb-1">
+                    <span>업스케일</span>
+                    <span className="font-medium text-gray-900">{scale}x ({state.pavData.width * scale} x {state.pavData.height * scale})</span>
+                  </label>
+                  <input
+                    type="range"
+                    min={1}
+                    max={5}
+                    step={1}
+                    value={scale}
+                    onChange={(e) => setScale(Number(e.target.value))}
+                    className="w-full accent-green-600"
+                  />
+                  <div className="flex justify-between text-xs text-gray-400 mt-0.5">
+                    <span>1x</span>
+                    <span>2x</span>
+                    <span>3x</span>
+                    <span>4x</span>
+                    <span>5x</span>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="flex justify-between text-sm text-gray-600 mb-1">
+                    <span>화질</span>
+                    <span className="font-medium text-gray-900">{quality}</span>
+                  </label>
+                  <input
+                    type="range"
+                    min={1}
+                    max={100}
+                    step={1}
+                    value={quality}
+                    onChange={(e) => setQuality(Number(e.target.value))}
+                    className="w-full accent-green-600"
+                  />
+                  <div className="flex justify-between text-xs text-gray-400 mt-0.5">
+                    <span>낮음</span>
+                    <span>높음</span>
+                  </div>
+                </div>
+              </div>
+
+              <button
+                onClick={handleConvert}
+                className="w-full py-3 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors cursor-pointer"
+              >
+                MP4로 변환하기
+              </button>
+            </div>
           )}
 
           {(state.step === 'loading' || state.step === 'converting') && (

@@ -27,18 +27,26 @@ export async function loadFFmpeg(): Promise<FFmpeg> {
 export interface ConvertOptions {
   onProgress?: (progress: number) => void;
   onLog?: (message: string) => void;
+  /** 업스케일 배율 (1~5, 기본 2) */
+  scale?: number;
+  /** 화질 (1~100, 기본 55 = CRF 23) */
+  quality?: number;
 }
 
 export async function convertPavToMp4(
   pavData: PavData,
   options?: ConvertOptions
 ): Promise<Blob> {
-  const { onProgress, onLog } = options ?? {};
+  const { onProgress, onLog, scale = 2, quality = 55 } = options ?? {};
   const log = (msg: string) => {
     onLog?.(msg);
   };
 
-  log(`변환 시작 - ${pavData.frames.length} frames, ${pavData.fps.toFixed(1)} fps`);
+  const clampedScale = Math.max(1, Math.min(5, Math.round(scale)));
+  const clampedQuality = Math.max(1, Math.min(100, Math.round(quality)));
+  const crf = String(Math.round(51 * (1 - (clampedQuality - 1) / 99)));
+
+  log(`변환 시작 - ${pavData.frames.length} frames, ${pavData.fps.toFixed(1)} fps, ${clampedScale}x 업스케일, 화질 ${clampedQuality} (CRF ${crf})`);
 
   const ff = await loadFFmpeg();
 
@@ -74,12 +82,18 @@ export async function convertPavToMp4(
     const fps = pavData.fps.toFixed(4);
     log('FFmpeg 인코딩 시작 (오디오 포함)...');
 
+    const vf = clampedScale > 1
+      ? ['-vf', `scale=iw*${clampedScale}:ih*${clampedScale}:flags=lanczos`]
+      : [];
+
     // Try with audio first
     let ret = await ff.exec([
       '-framerate', fps,
       '-i', padPattern,
       '-i', 'audio.qcp',
       '-c:v', 'libx264',
+      '-crf', crf,
+      ...vf,
       '-c:a', 'aac',
       '-pix_fmt', 'yuv420p',
       '-shortest',
@@ -93,6 +107,8 @@ export async function convertPavToMp4(
         '-framerate', fps,
         '-i', padPattern,
         '-c:v', 'libx264',
+        '-crf', crf,
+        ...vf,
         '-pix_fmt', 'yuv420p',
         '-y', 'output.mp4',
       ]);
